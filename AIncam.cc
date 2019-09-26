@@ -1,0 +1,1007 @@
+#include "Player.hh"
+
+#define PLAYER_NAME ncam
+
+struct PLAYER_NAME : public Player {
+
+
+    static Player* factory () {
+        return new PLAYER_NAME;
+    }
+
+    struct atributs {
+        Pos from = Pos(-1,-1);
+        bool vist = false;
+        int dist = 999;
+        bool cami = false;
+    };
+
+    struct nivells {
+        //posicio de la cel·la amb aigua mes propera i la distancia a la que esta
+        Pos aiguamespropera;
+        int distaigua;
+        Pos stationmespropera;
+        int diststation;
+
+    };
+
+
+    typedef pair<Pos,int> parellidist;
+
+    parellidist cerca_aigua(int fi, int ci) {
+
+        Pos p = Pos(fi,ci);
+        queue<Pos> posicions;
+        queue<int> distancies;
+        int dist;
+        posicions.push(p);
+        distancies.push(1);
+        Matriubool vis(60, vector<bool>(60, false)); //per saber si els hem visitat
+
+        while (not posicions.empty()) {
+
+            Pos actual = posicions.front();
+            int dist = distancies.front();
+            int f = actual.i;
+            int c = actual.j;
+
+            //mirem que hi ha a totes les caselles del voltant i si son visitables les visitem i posem la pos a la cua
+
+            Pos p2;
+            //dreta
+            p2 = actual + Right;
+            if (pos_ok(p2) and vis[f][c+1] == false and cell(p2).type != Wall) { //mira si la pos esta a la matriu, si no es una paret i si l'hem visitat
+
+                if (cell(p2).type == Water) {
+                    return parellidist(p2,dist);
+                }
+                vis[f][c+1] = true;
+                posicions.push(p2);
+                distancies.push(dist+1);
+            }
+
+            //diagonal dreta-baix
+            p2 = actual + BR;
+            if (pos_ok(p2) and vis[f+1][c+1] == false and cell(p2).type != Wall) {
+
+                if (cell(p2).type == Water) {
+                    return parellidist(p2,dist);
+                }
+                vis[f+1][c+1] = true;
+                posicions.push(p2);
+                distancies.push(dist+1);
+            }
+
+            //Abaix
+            p2 = actual + Bottom;
+            if (pos_ok(p2) and vis[f+1][c] == false and cell(p2).type != Wall) {
+
+                if (cell(p2).type == Water) {
+                    return parellidist(p2,dist);
+                }
+                vis[f+1][c] = true;
+                posicions.push(p2);
+                distancies.push(dist+1);
+            }
+
+            //diagonal baix-esquerra
+            p2 = actual + LB;
+            if (pos_ok(p2) and vis[f+1][c-1] == false and cell(p2).type != Wall) {
+
+                if (cell(p2).type == Water) {
+                    return parellidist(p2,dist);
+                }
+                vis[f+1][c-1] = true;
+                posicions.push(p2);
+                distancies.push(dist+1);
+            }
+
+            //esquerra
+            p2 = actual + Left;
+            if (pos_ok(p2) and vis[f][c-1] == false and cell(p2).type != Wall) {
+
+                if (cell(p2).type == Water) {
+                    return parellidist(p2,dist);
+                }
+                vis[f][c-1] = true;
+                posicions.push(p2);
+                distancies.push(dist+1);
+            }
+
+            //diagonal dalt-esquerra
+            p2 = actual + TL;
+            if (pos_ok(p2) and vis[f-1][c-1] == false and cell(p2).type != Wall) {
+
+                if (cell(p2).type == Water) {
+                    return parellidist(p2,dist);
+                }
+                vis[f-1][c-1] = true;
+                posicions.push(p2);
+                distancies.push(dist+1);
+            }
+
+            p2 = actual + Top;
+            if (pos_ok(p2) and vis[f-1][c] == false and cell(p2).type != Wall) {
+
+                if (cell(p2).type == Water) {
+                    return parellidist(p2,dist);
+                }
+                vis[f-1][c] = true;
+                posicions.push(p2);
+                distancies.push(dist+1);
+            }
+
+            p2 = actual + RT;
+            if (pos_ok(p2) and vis[f-1][c+1] == false and cell(p2).type != Wall) {
+
+                if (cell(p2).type == Water) {
+                    return parellidist(p2,dist);
+                }
+                vis[f-1][c+1] = true;
+                posicions.push(p2);
+                distancies.push(dist+1);
+            }
+            posicions.pop();
+            distancies.pop();
+        }
+    }
+
+    vector<vector<nivells> > Mnivells;
+
+
+    typedef vector<vector<bool> > Matriubool;
+
+    typedef vector<vector<atributs> > Matriuatributs;
+
+    typedef vector<int> VE;
+
+    bool podemmoure(Pos p) {
+
+        if (pos_ok(p) and cell(p).type != Wall and cell(p).type != Water) return true;
+        return false;
+    }
+
+    bool notaliat(Pos p) {
+        if (cell(p).id != -1) {
+            if (unit(cell(p).id).player == me() ) return false;
+        }
+        return true;
+    }
+
+    void movem_ciutat_enemiga(Matriuatributs &Mat, Pos p, int id) {
+        Pos p2;
+        Unit u = unit(id);
+
+        vector<Pos> adj(8);
+        adj[0] = p+Right;
+        adj[1] = p+RT;
+        adj[2] = p+Top;
+        adj[3] = p+TL;
+        adj[4] = p+Left;
+        adj[5] = p+LB;
+        adj[6] = p+Bottom;
+        adj[7] = p+BR;
+
+        for (int i=0; i<8; ++i) {
+            Pos p2 = adj[i];
+            if (pos_ok(p2)) {
+                if (cell(p2).type == City and cell(p2).owner != me() and notaliat(p2) ) {
+                    moure_cotxes(u,p2);
+                    return;
+                }
+                if (cell(p2).id != -1 and unit(cell(p2).id).type == Warrior and unit(cell(p2).id).player != me()) {
+                    Unit o = unit(cell(p2).id);
+                    if (min(o.food,o.water) < min(u.food,u.water)) {
+                        moure_cotxes(u,p2);
+                        return;
+                    }
+                }
+                else if (Mat[p2.i][p2.j].cami) {
+                    if(notaliat(p2)) moure_cotxes(u,p2);
+                }
+            }
+        }
+
+        /* else if (Mat[p2.i][p2.j].cami) {
+             if(cell(p2).id != -1 and unit(cell(p2).id).player == me()) return;
+             command(id,Right);
+             return;*/
+
+    }
+
+    Matriuatributs cerca_ciutat_enemiga(Pos p) {
+
+        //TODO: Fer que al mirar les adjacencies no vagin contra una paret
+        //      Fer que no es matin entre ells
+        //      Fer que entrin a la ciutat i no es quedin devant com gilipolles
+
+        Matriuatributs Matributs(60,vector<atributs>(60));
+        //tenim una matriu de la mateixa mida del tauler amb atributs necessaris pel dijkstra
+
+        Matributs[p.i][p.j].dist = 0;
+        queue<Pos> Q;
+        Q.push(p);
+        while(not Q.empty() and (cell(Q.front()).type != City or (cell(Q.front()).type == City and cell(Q.front()).owner == me()))) {
+            Pos newp = Q.front();
+            Q.pop();
+
+            if (Matributs[newp.i][newp.j].vist == false) { //si encara no hem visitat aquesta posicio
+
+                Matributs[newp.i][newp.j].vist = true;
+
+                //mirem totes les adjacencies
+
+                Pos aux;
+                //Top
+                aux = newp+Top;
+                if (podemmoure(aux)) {
+                    if (Matributs[newp.i][newp.j].dist + 1 < Matributs[aux.i][aux.j].dist) {
+                        Matributs[aux.i][aux.j].dist = Matributs[newp.i][newp.j].dist +1;
+                        Matributs[aux.i][aux.j].from = newp;
+                        Q.push(aux);
+                    }
+                }
+
+                //Right
+                aux = newp+Right;
+                if (podemmoure(aux)) {
+                    if (Matributs[newp.i][newp.j].dist + 1 < Matributs[aux.i][aux.j].dist) {
+                        Matributs[aux.i][aux.j].dist = Matributs[newp.i][newp.j].dist +1;
+                        Matributs[aux.i][aux.j].from = newp;
+                        Q.push(aux);
+                    }
+                }
+
+                //Bottom
+                aux = newp+Bottom;
+                if (podemmoure(aux)) {
+                    if (Matributs[newp.i][newp.j].dist + 1 < Matributs[aux.i][aux.j].dist) {
+                        Matributs[aux.i][aux.j].dist = Matributs[newp.i][newp.j].dist +1;
+                        Matributs[aux.i][aux.j].from = newp;
+                        Q.push(aux);
+                    }
+                }
+
+                //Left
+                aux = newp+Left;
+                if (podemmoure(aux)) {
+                    if (Matributs[newp.i][newp.j].dist + 1 < Matributs[aux.i][aux.j].dist) {
+                        Matributs[aux.i][aux.j].dist = Matributs[newp.i][newp.j].dist +1;
+                        Matributs[aux.i][aux.j].from = newp;
+                        Q.push(aux);
+                    }
+                }
+
+                //BR
+                aux = newp+BR;
+                if (podemmoure(aux)) {
+                    if (Matributs[newp.i][newp.j].dist + 1 < Matributs[aux.i][aux.j].dist) {
+                        Matributs[aux.i][aux.j].dist = Matributs[newp.i][newp.j].dist +1;
+                        Matributs[aux.i][aux.j].from = newp;
+                        Q.push(aux);
+                    }
+                }
+
+                //RT
+                aux = newp+RT;
+                if (podemmoure(aux)) {
+                    if (Matributs[newp.i][newp.j].dist + 1 < Matributs[aux.i][aux.j].dist) {
+                        Matributs[aux.i][aux.j].dist = Matributs[newp.i][newp.j].dist +1;
+                        Matributs[aux.i][aux.j].from = newp;
+                        Q.push(aux);
+                    }
+                }
+
+                //TL
+                aux = newp+TL;
+                if (podemmoure(aux)) {
+                    if (Matributs[newp.i][newp.j].dist + 1 < Matributs[aux.i][aux.j].dist) {
+                        Matributs[aux.i][aux.j].dist = Matributs[newp.i][newp.j].dist +1;
+                        Matributs[aux.i][aux.j].from = newp;
+                        Q.push(aux);
+                    }
+                }
+
+                //LB
+                aux = newp+LB;
+                if (podemmoure(aux)) {
+                    if (Matributs[newp.i][newp.j].dist + 1 < Matributs[aux.i][aux.j].dist) {
+                        Matributs[aux.i][aux.j].dist = Matributs[newp.i][newp.j].dist +1;
+                        Matributs[aux.i][aux.j].from = newp;
+                        Q.push(aux);
+                    }
+                }
+
+
+            }
+        }
+
+        if (cell(Q.front()).type == City and cell(Q.front()).owner != me()) {
+
+            Pos p1 = Q.front();
+
+            Pos p2 = p1;
+            while (p1 != p) {
+                //Right
+                p2 = p1 + Right;
+                if (pos_ok(p2)) {
+                    if (Matributs[p2.i][p2.j].dist == Matributs[p1.i][p1.j].dist - 1) {
+                        Matributs[p2.i][p2.j].cami = true;
+                        p1 = p2;
+                    }
+                }
+
+                //Bottom
+                p2 = p1 + Bottom;
+                if (pos_ok(p2)) {
+                    if (Matributs[p2.i][p2.j].dist == Matributs[p1.i][p1.j].dist - 1) {
+                        Matributs[p2.i][p2.j].cami = true;
+                        p1 = p2;
+                    }
+                }
+
+                //Left
+                p2 = p1 + Left;
+                if (pos_ok(p2)) {
+                    if (Matributs[p2.i][p2.j].dist == Matributs[p1.i][p1.j].dist - 1) {
+                        Matributs[p2.i][p2.j].cami = true;
+                        p1 = p2;
+                    }
+                }
+
+                //Top
+                p2 = p1 + Top;
+                if (pos_ok(p2)) {
+                    if (Matributs[p2.i][p2.j].dist == Matributs[p1.i][p1.j].dist - 1) {
+                        Matributs[p2.i][p2.j].cami = true;
+                        p1 = p2;
+                    }
+                }
+
+                //RT
+                p2 = p1 + RT;
+                if (pos_ok(p2)) {
+                    if (Matributs[p2.i][p2.j].dist == Matributs[p1.i][p1.j].dist - 1) {
+                        Matributs[p2.i][p2.j].cami = true;
+                        p1 = p2;
+                    }
+                }
+
+                //BR
+                p2 = p1 + BR;
+                if (pos_ok(p2)) {
+                    if (Matributs[p2.i][p2.j].dist == Matributs[p1.i][p1.j].dist - 1) {
+                        Matributs[p2.i][p2.j].cami = true;
+                        p1 = p2;
+                    }
+                }
+
+                //LB
+                p2 = p1 + LB;
+                if (pos_ok(p2)) {
+                    if (Matributs[p2.i][p2.j].dist == Matributs[p1.i][p1.j].dist - 1) {
+                        Matributs[p2.i][p2.j].cami = true;
+                        p1 = p2;
+                    }
+                }
+
+                //TL
+                p2 = p1 + TL;
+                if (pos_ok(p2)) {
+                    if (Matributs[p2.i][p2.j].dist == Matributs[p1.i][p1.j].dist - 1) {
+                        Matributs[p2.i][p2.j].cami = true;
+                        p1 = p2;
+                    }
+                }
+            }
+        }
+
+        return Matributs;
+    }
+
+    bool esunaliat(Pos p) {
+        if (cell(p).id != -1) {
+            if (unit(cell(p).id).player == me()) return true;
+        }
+        return false;
+    }
+
+    void moure_cotxes(Unit u, Pos p) {
+        Pos r = u.pos;
+        if (r+Right == p) {
+            if (cell(p).id == -1 or unit(cell(p).id).type != Car)  command(u.id,Right);
+        }
+        else if (r+Left == p) {
+            if (cell(p).id == -1 or unit(cell(p).id).type != Car) command(u.id,Left);
+        }
+        else if (r+Top == p) {
+            if (cell(p).id == -1 or unit(cell(p).id).type != Car) command(u.id,Top);
+        }
+        else if (r+Bottom == p) {
+            if (cell(p).id == -1 or unit(cell(p).id).type != Car) command(u.id,Bottom);
+        }
+        else if (r+BR == p) {
+            if (cell(p).id == -1 or unit(cell(p).id).type != Car) command(u.id,BR);
+        }
+        else if (r+RT == p) {
+            if (cell(p).id == -1 or unit(cell(p).id).type != Car) command(u.id,RT);
+        }
+        else if (r+TL == p) {
+            if (cell(p).id == -1 or unit(cell(p).id).type != Car) command(u.id,TL);
+        }
+        else if (r+LB == p) {
+            if (cell(p).id == -1 or unit(cell(p).id).type != Car) command(u.id,LB);
+        }
+    }
+
+    int minim(int int0, int int1, int int2, int int3, int int4, int int5, int int6, int int7) {
+        int min;
+        if (int0 <= int1 and int0 <= int2 and int0 <= int3 and int0 <= int4 and int0 <= int5 and int0 <= int6 and int0 <= int7) min = int0;
+        if (int1 <= int0 and int1 <= int2 and int1 <= int3 and int1 <= int4 and int1 <= int5 and int1 <= int6 and int1 <= int7) min = int1;
+        if (int2 <= int0 and int2 <= int1 and int2 <= int3 and int2 <= int4 and int2 <= int5 and int2 <= int6 and int2 <= int7) min = int2;
+        if (int3 <= int0 and int3 <= int1 and int3 <= int2 and int3 <= int4 and int3 <= int5 and int3 <= int6 and int3 <= int7) min = int3;
+        if (int4 <= int0 and int4 <= int1 and int4 <= int2 and int4 <= int3 and int4 <= int5 and int4 <= int6 and int4 <= int7) min = int4;
+        if (int5 <= int0 and int5 <= int1 and int5 <= int2 and int5 <= int3 and int5 <= int4 and int5 <= int6 and int5 <= int7) min = int5;
+        if (int6 <= int0 and int6 <= int1 and int6 <= int2 and int6 <= int3 and int6 <= int4 and int6 <= int5 and int6 <= int7) min = int6;
+        if (int7 <= int0 and int7 <= int1 and int7 <= int2 and int7 <= int3 and int7 <= int4 and int7 <= int5 and int7 <= int6) min = int7;
+
+        return min;
+    }
+
+    bool eswarriorenemic(Pos p) {
+        int id = cell(p).id;
+        if(id != -1 and unit(id).player != me() and unit(id).type == Warrior) return true;
+        return false;
+    }
+
+    void cotxesalprincipi (Unit u) {
+
+        Pos p = u.pos;
+        int i =p.i;
+        int j = p.j;
+        Pos p2;
+        Pos p3;
+
+        p2 = p+Right;
+        p3 = p+Left;
+        if (cell(p2).type == Desert and cell(p3).type == Desert) {
+            if (i < 30) {
+                //estem a la part superior
+                command(u.id,Bottom);
+                return;
+            }
+            else if (i > 30) {
+                //inferior
+                command(u.id,Top);
+                return;
+            }
+        }
+        p2 = p+Top;
+        p3 = p+Bottom;
+
+        if (cell(p2).type == Desert and cell(p3).type == Desert) {
+            if (j > 30) {
+                //estem a la dreta
+                command(u.id, Left);
+                return;
+            }
+            else if (j < 30) {
+                //esquerra
+                command(u.id, Top);
+                return;
+            }
+        }
+        return;
+    }
+
+    parellidist cerca_fuel(int fi, int ci) {
+
+        Pos p = Pos(fi,ci);
+        queue<Pos> posicions;
+        queue<int> distancies;
+        int dist;
+        posicions.push(p);
+        distancies.push(1);
+        Matriubool vis(60, vector<bool>(60, false)); //per saber si els hem visitat
+
+        while (not posicions.empty()) {
+
+            Pos actual = posicions.front();
+            int dist = distancies.front();
+            int f = actual.i;
+            int c = actual.j;
+
+            //mirem que hi ha a totes les caselles del voltant i si son visitables les visitem i posem la pos a la cua
+
+            Pos p2;
+            //dreta
+            p2 = actual + Right;
+            if (pos_ok(p2) and vis[f][c+1] == false and cell(p2).type != Wall and cell(p2).type != Water) { //mira si la pos esta a la matriu, si no es una paret i si l'hem visitat
+
+                if (cell(p2).type == Station) {
+                    return parellidist(p2,dist);
+                }
+                vis[f][c+1] = true;
+                posicions.push(p2);
+                distancies.push(dist+1);
+            }
+
+            //diagonal dreta-baix
+            p2 = actual + BR;
+            if (pos_ok(p2) and vis[f+1][c+1] == false and cell(p2).type != Wall and cell(p2).type != Water) {
+
+                if (cell(p2).type == Station) {
+                    return parellidist(p2,dist);
+                }
+                vis[f+1][c+1] = true;
+                posicions.push(p2);
+                distancies.push(dist+1);
+            }
+
+            //Abaix
+            p2 = actual + Bottom;
+            if (pos_ok(p2) and vis[f+1][c] == false and cell(p2).type != Wall and cell(p2).type != Water) {
+
+                if (cell(p2).type == Station) {
+                    return parellidist(p2,dist);
+                }
+                vis[f+1][c] = true;
+                posicions.push(p2);
+                distancies.push(dist+1);
+            }
+
+            //diagonal baix-esquerra
+            p2 = actual + LB;
+            if (pos_ok(p2) and vis[f+1][c-1] == false and cell(p2).type != Wall and cell(p2).type != Water) {
+
+                if (cell(p2).type == Station) {
+                    return parellidist(p2,dist);
+                }
+                vis[f+1][c-1] = true;
+                posicions.push(p2);
+                distancies.push(dist+1);
+            }
+
+            //esquerra
+            p2 = actual + Left;
+            if (pos_ok(p2) and vis[f][c-1] == false and cell(p2).type != Wall and cell(p2).type != Water) {
+
+                if (cell(p2).type == Station) {
+                    return parellidist(p2,dist);
+                }
+                vis[f][c-1] = true;
+                posicions.push(p2);
+                distancies.push(dist+1);
+            }
+
+            //diagonal dalt-esquerra
+            p2 = actual + TL;
+            if (pos_ok(p2) and vis[f-1][c-1] == false and cell(p2).type != Wall and cell(p2).type != Water) {
+
+                if (cell(p2).type == Station) {
+                    return parellidist(p2,dist);
+                }
+                vis[f-1][c-1] = true;
+                posicions.push(p2);
+                distancies.push(dist+1);
+            }
+
+            p2 = actual + Top;
+            if (pos_ok(p2) and vis[f-1][c] == false and cell(p2).type != Wall and cell(p2).type != Water) {
+
+                if (cell(p2).type == Station) {
+                    return parellidist(p2,dist);
+                }
+                vis[f-1][c] = true;
+                posicions.push(p2);
+                distancies.push(dist+1);
+            }
+
+            p2 = actual + RT;
+            if (pos_ok(p2) and vis[f-1][c+1] == false and cell(p2).type != Wall and cell(p2).type != Water) {
+
+                if (cell(p2).type == Station) {
+                    return parellidist(p2,dist);
+                }
+                vis[f-1][c+1] = true;
+                posicions.push(p2);
+                distancies.push(dist+1);
+            }
+            posicions.pop();
+            distancies.pop();
+        }
+        Pos null = Pos(-1,-1);
+        return make_pair(null,-1);
+    }
+
+    void cerca_cami (Unit u, Pos &excepcio) {
+
+        map <Pos, int> dist;
+        map <Pos, Pos> posicioanterior;
+        map <Pos, bool> visitat;
+        dist.insert(make_pair(u.pos, 0));
+        visitat.insert(make_pair(u.pos, false));
+
+        priority_queue < pair <int,Pos>, vector <pair <int,Pos> >, greater<pair <int,Pos> > > Q;
+        Q.push(make_pair(0, u.pos));
+
+        bool found = false;
+        Pos utrobada = excepcio;
+
+        while(not Q.empty() and not found) {
+            pair<int,Pos> actual = Q.top();
+            int distActual = actual.first;
+            Pos posActual = actual.second;
+            int idActual = cell(posActual).id;
+            Q.pop();
+
+
+            if (eswarriorenemic(posActual)) {
+                found = true;
+                utrobada = posActual;
+            }
+
+            else if (not visitat[posActual]) {
+                visitat[posActual] = true;
+
+                Pos p2;
+                //Mirarem per totes les adjacències
+
+                //top
+                p2 = posActual + Top;
+                if (pos_ok(p2)) {
+                    Cell c2 = cell(p2);
+                    if (dist.find(p2) == dist.end()) {
+                        visitat.insert(make_pair(p2, false));
+                        dist.insert(make_pair(p2, 99999));
+                    }
+                    if (not esunaliat(p2)) {
+                        if (c2.type == Road) {
+                            if (dist[p2] > dist[posActual] + 1) {
+                                dist[p2] = dist[posActual] + 1;
+                                posicioanterior.insert(make_pair(p2, posActual));
+                                Q.push({dist[p2], p2});
+                            }
+                        }
+                        else if (c2.type == Desert) {
+                            if (dist[p2] > dist[posActual] + 4) {
+                                dist[p2] = dist[posActual] + 4;
+                                posicioanterior.insert(make_pair(p2, posActual));
+                                Q.push({dist[p2], p2});
+                            }
+                        }
+                    }
+                }
+
+                //Right-Top
+                p2 = posActual + RT;
+                if (pos_ok(p2)) {
+                    Cell c2 = cell(p2);
+                    if (dist.find(p2) == dist.end()) {
+                        visitat.insert(make_pair(p2, false));
+                        dist.insert(make_pair(p2, 99999));
+                    }
+                    if (not esunaliat(p2)) {
+                        if (c2.type == Road) {
+                            if (dist[p2] > dist[posActual] + 1) {
+                                dist[p2] = dist[posActual] + 1;
+                                posicioanterior.insert(make_pair(p2, posActual));
+                                Q.push({dist[p2], p2});
+                            }
+                        }
+                        else if (c2.type == Desert) {
+                            if (dist[p2] > dist[posActual] + 4) {
+                                dist[p2] = dist[posActual] + 4;
+                                posicioanterior.insert(make_pair(p2, posActual));
+                                Q.push({dist[p2], p2});
+                            }
+                        }
+                    }
+                }
+
+                //Right
+                p2 = posActual + Right;
+                if (pos_ok(p2)) {
+                    Cell c2 = cell(p2);
+                    if (dist.find(p2) == dist.end()) {
+                        visitat.insert(make_pair(p2, false));
+                        dist.insert(make_pair(p2, 99999));
+                    }
+                    if (not esunaliat(p2)) {
+                        if (c2.type == Road) {
+                            if (dist[p2] > dist[posActual] + 1) {
+                                dist[p2] = dist[posActual] + 1;
+                                posicioanterior.insert(make_pair(p2, posActual));
+                                Q.push({dist[p2], p2});
+                            }
+                        }
+                        else if (c2.type == Desert) {
+                            if (dist[p2] > dist[posActual] + 4) {
+                                dist[p2] = dist[posActual] + 4;
+                                posicioanterior.insert(make_pair(p2, posActual));
+                                Q.push({dist[p2], p2});
+                            }
+                        }
+                    }
+                }
+
+                //Bottom-Right
+                p2 = posActual + BR;
+                if (pos_ok(p2)) {
+                    Cell c2 = cell(p2);
+                    if (dist.find(p2) == dist.end()) {
+                        visitat.insert(make_pair(p2, false));
+                        dist.insert(make_pair(p2, 99999));
+                    }
+                    if (not esunaliat(p2)) {
+                        if (c2.type == Road) {
+                            if (dist[p2] > dist[posActual] + 1) {
+                                dist[p2] = dist[posActual] + 1;
+                                posicioanterior.insert(make_pair(p2, posActual));
+                                Q.push({dist[p2], p2});
+                            }
+                        }
+                        else if (c2.type == Desert) {
+                            if (dist[p2] > dist[posActual] + 4) {
+                                dist[p2] = dist[posActual] + 4;
+                                posicioanterior.insert(make_pair(p2, posActual));
+                                Q.push({dist[p2], p2});
+                            }
+                        }
+                    }
+                }
+
+                //Bottom
+                p2 = posActual + Bottom;
+                if (pos_ok(p2)) {
+                    Cell c2 = cell(p2);
+                    if (dist.find(p2) == dist.end()) {
+                        visitat.insert(make_pair(p2, false));
+                        dist.insert(make_pair(p2, 99999));
+                    }
+                    if (not esunaliat(p2)) {
+                        if (c2.type == Road) {
+                            if (dist[p2] > dist[posActual] + 1) {
+                                dist[p2] = dist[posActual] + 1;
+                                posicioanterior.insert(make_pair(p2, posActual));
+                                Q.push({dist[p2], p2});
+                            }
+                        }
+                        else if (c2.type == Desert) {
+                            if (dist[p2] > dist[posActual] + 4) {
+                                dist[p2] = dist[posActual] + 4;
+                                posicioanterior.insert(make_pair(p2, posActual));
+                                Q.push({dist[p2], p2});
+                            }
+                        }
+                    }
+                }
+
+                //Left-Bottom
+                p2 = posActual + LB;
+                if (pos_ok(p2)) {
+                    Cell c2 = cell(p2);
+                    if (dist.find(p2) == dist.end()) {
+                        visitat.insert(make_pair(p2, false));
+                        dist.insert(make_pair(p2, 99999));
+                    }
+                    if (not esunaliat(p2)) {
+                        if (c2.type == Road) {
+                            if (dist[p2] > dist[posActual] + 1) {
+                                dist[p2] = dist[posActual] + 1;
+                                posicioanterior.insert(make_pair(p2, posActual));
+                                Q.push({dist[p2], p2});
+                            }
+                        }
+                        else if (c2.type == Desert) {
+                            if (dist[p2] > dist[posActual] + 4) {
+                                dist[p2] = dist[posActual] + 4;
+                                posicioanterior.insert(make_pair(p2, posActual));
+                                Q.push({dist[p2], p2});
+                            }
+                        }
+                    }
+                }
+
+                //left
+                p2 = posActual + Left;
+                if (pos_ok(p2)) {
+                    Cell c2 = cell(p2);
+                    if (dist.find(p2) == dist.end()) {
+                        visitat.insert(make_pair(p2, false));
+                        dist.insert(make_pair(p2, 99999));
+                    }
+                    if (not esunaliat(p2)) {
+                        if (c2.type == Road) {
+                            if (dist[p2] > dist[posActual] + 1) {
+                                dist[p2] = dist[posActual] + 1;
+                                posicioanterior.insert(make_pair(p2, posActual));
+                                Q.push({dist[p2], p2});
+                            }
+                        }
+                        else if (c2.type == Desert) {
+                            if (dist[p2] > dist[posActual] + 4) {
+                                dist[p2] = dist[posActual] + 4;
+                                posicioanterior.insert(make_pair(p2, posActual));
+                                Q.push({dist[p2], p2});
+                            }
+                        }
+                    }
+                }
+
+                //Top-Left
+                p2 = posActual + TL;
+                if (pos_ok(p2)) {
+                    Cell c2 = cell(p2);
+                    if (dist.find(p2) == dist.end()) {
+                        visitat.insert(make_pair(p2, false));
+                        dist.insert(make_pair(p2, 99999));
+                    }
+                    if (not esunaliat(p2)) {
+                        if (c2.type == Road) {
+                            if (dist[p2] > dist[posActual] + 1) {
+                                dist[p2] = dist[posActual] + 1;
+                                posicioanterior.insert(make_pair(p2, posActual));
+                                Q.push({dist[p2], p2});
+                            }
+                        }
+                        else if (c2.type == Desert) {
+                            if (dist[p2] > dist[posActual] + 4) {
+                                dist[p2] = dist[posActual] + 4;
+                                posicioanterior.insert(make_pair(p2, posActual));
+                                Q.push({dist[p2], p2});
+                            }
+                        }
+                    }
+                }
+
+            }
+        }
+        //cout << "al acabar la cerca "<< found << endl;
+        if (found) {
+            Pos resultat = utrobada;
+            Pos ultim = resultat;
+            while (resultat != u.pos) {
+                ultim = resultat;
+                resultat = posicioanterior[resultat];
+            }
+            ///cout << "em moure de la posicio " << resultat << " a la posicio " << ultim << endl;
+            if (ultim != excepcio) {
+                excepcio = ultim;
+                moure_cotxes(u, ultim);
+            }
+        }
+    }
+
+    bool incity(Pos p) {
+        if (cell(p).type == City) return true;
+        return false;
+    }
+
+    void move_cars () {
+        VE C = cars(me());
+        int n = C.size();
+        Pos excepcio = Pos(0,0);
+
+        for (int i=0; i<n; ++i) {
+            int id = C[i];
+            Unit u = unit(id);
+            Pos p = u.pos;
+            int aux;
+            Pos posaux;
+
+            /*if (round() < 7) {
+                cotxesalprincipi(u);
+            }
+            else {*/
+
+                /*if (unit(id).food <= Mnivells[p.i][p.j].diststation) {
+
+                    aux = minim(Mnivells[p.i-1][p.j].diststation,Mnivells[p.i-1][p.j+1].diststation,Mnivells[p.i][p.j+1].diststation,Mnivells[p.i+1][p.j+1].diststation, Mnivells[p.i+1][p.j].diststation,Mnivells[p.i-1][p.j-1].diststation, Mnivells[p.i][p.j-1].diststation, Mnivells[p.i+1][p.j-1].diststation);
+                    if (Mnivells[p.i-1][p.j].diststation == aux) posaux = Pos(p.i-1,p.j);
+                    else if (Mnivells[p.i-1][p.j+1].diststation == aux) posaux = Pos(p.i-1,p.j+1);
+                    else if (Mnivells[p.i][p.j+1].diststation == aux) posaux = Pos(p.i,p.j+1);
+                    else if (Mnivells[p.i+1][p.j+1].diststation == aux) posaux = Pos(p.i+1,p.j+1);
+                    else if (Mnivells[p.i+1][p.j].diststation == aux) posaux = Pos(p.i+1,p.j);
+                    else if (Mnivells[p.i-1][p.j-1].diststation == aux) posaux = Pos(p.i-1,p.j-1);
+                    else if (Mnivells[p.i][p.j-1].diststation == aux) posaux = Pos(p.i,p.j-1);
+                    else if (Mnivells[p.i+1][p.j-1].diststation == aux) posaux = Pos(p.i+1,p.j-1);
+
+                    moure_cotxes(unit(id), posaux);
+                }
+                else {
+                    cerca_cami(unit(id));
+                }*/
+                cerca_cami(unit(id),excepcio);
+          // }
+
+        }
+    }
+
+    void move_warriors() {
+        if (round()% 4 != me()) return; // This line makes a lot of sense.
+
+        VE W = warriors(me());
+        int n = W.size();
+
+        for (int i=0; i<n; ++i) {
+            //if ( i < 35) {
+            int id = W[i];
+            Pos p = unit(id).pos;
+            if (not incity(p)) {
+                if (unit(id).water < 20 and Mnivells[p.i][p.j].distaigua <= 5) {
+                    if (Mnivells[p.i-1][p.j].distaigua < Mnivells[p.i][p.j].distaigua) {
+                        command (id,Top);
+                        return;
+                    }
+                    if (Mnivells[p.i-1][p.j+1].distaigua < Mnivells[p.i][p.j].distaigua) {
+                        command (id,RT);
+                        return;
+                    }
+                    if (Mnivells[p.i][p.j+1].distaigua < Mnivells[p.i][p.j].distaigua) {
+                        command (id,Right);
+                        return;
+                    }
+                    if (Mnivells[p.i+1][p.j+1].distaigua < Mnivells[p.i][p.j].distaigua) {
+                        command (id,BR);
+                        return;
+                    }
+                    if (Mnivells[p.i+1][p.j].distaigua < Mnivells[p.i][p.j].distaigua) {
+                        command (id,Bottom);
+                        return;
+                    }
+                    if (Mnivells[p.i-1][p.j-1].distaigua < Mnivells[p.i][p.j].distaigua) {
+                        command (id,LB);
+                        return;
+                    }
+                    if (Mnivells[p.i][p.j-1].distaigua < Mnivells[p.i][p.j].distaigua) {
+                        command (id,Left);
+                        return;
+                    }
+                    if (Mnivells[p.i+1][p.j-1].distaigua < Mnivells[p.i][p.j].distaigua) {
+                        command (id,TL);
+                        return;
+                    }
+                }
+                else {
+                    Matriuatributs Mat = cerca_ciutat_enemiga(p);
+                    movem_ciutat_enemiga(Mat, p, id);
+                }
+            }
+            // }
+        }
+    }
+
+    virtual void play () {
+        if (status(me()) <= 0.85) {
+            if (round() == 0) {
+                vector<vector<nivells> > Mnivells2(60,vector<nivells>(60));
+                Mnivells = Mnivells2;
+                for (int i=0; i<60; ++i) {
+                    for (int j=0; j<60; ++j) {
+                        parellidist aux;
+                        aux = cerca_aigua(i,j);
+                        Mnivells[i][j].aiguamespropera = aux.first;
+                        Mnivells[i][j].distaigua = aux.second;
+                        aux = cerca_fuel(i,j);
+                        Mnivells[i][j].stationmespropera = aux.first;
+                        Mnivells[i][j].diststation = aux.second;
+                    }
+                }
+            }
+
+            /*for(int l=0; l<60; ++l) {
+                for(int k=0; k<60; ++k) {
+                    cout << Mnivells[l][k].diststation << ' ';
+                }
+                cout << endl;
+            }*/
+            move_warriors();
+            move_cars();
+        }
+    }
+
+};
+
+
+RegisterPlayer(PLAYER_NAME);

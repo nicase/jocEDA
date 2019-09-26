@@ -1,0 +1,48 @@
+AIDemo.o: AIDemo.cc Player.hh Info.hh Settings.hh Structs.hh Utils.hh \
+ State.hh Action.hh Random.hh Registry.hh
+AINull.o: AINull.cc Player.hh Info.hh Settings.hh Structs.hh Utils.hh \
+ State.hh Action.hh Random.hh Registry.hh
+AIncam.o: AIncam.cc Player.hh Info.hh Settings.hh Structs.hh Utils.hh \
+ State.hh Action.hh Random.hh Registry.hh
+AIncam2.o: AIncam2.cc Player.hh Info.hh Settings.hh Structs.hh Utils.hh \
+ State.hh Action.hh Random.hh Registry.hh
+AInicase.o: AInicase.cc Player.hh Info.hh Settings.hh Structs.hh Utils.hh \
+ State.hh Action.hh Random.hh Registry.hh
+AInicase2.o: AInicase2.cc Player.hh Info.hh Settings.hh Structs.hh \
+ Utils.hh State.hh Action.hh Random.hh Registry.hh
+AInico.o: AInico.cc Player.hh Info.hh Settings.hh Structs.hh Utils.hh \
+ State.hh Action.hh Random.hh Registry.hh
+AIprova.o: AIprova.cc Player.hh Info.hh Settings.hh Structs.hh Utils.hh \
+ State.hh Action.hh Random.hh Registry.hh
+AIprova2.o: AIprova2.cc Player.hh Info.hh Settings.hh Structs.hh Utils.hh \
+ State.hh Action.hh Random.hh Registry.hh
+AIprova2correcte?.o: AIprova2correcte?.cc Player.hh Info.hh Settings.hh \
+ Structs.hh Utils.hh State.hh Action.hh Random.hh Registry.hh
+Action.o: Action.cc Action.hh Structs.hh Utils.hh
+Board.o: Board.cc Board.hh Info.hh Settings.hh Structs.hh Utils.hh \
+ State.hh Action.hh Random.hh
+Game.o: Game.cc Game.hh Player.hh Info.hh Settings.hh Structs.hh Utils.hh \
+ State.hh Action.hh Random.hh Registry.hh Board.hh
+Info.o: Info.cc Info.hh Settings.hh Structs.hh Utils.hh State.hh
+Main.o: Main.cc Game.hh Player.hh Info.hh Settings.hh Structs.hh Utils.hh \
+ State.hh Action.hh Random.hh Registry.hh Board.hh
+Player.o: Player.cc Player.hh Info.hh Settings.hh Structs.hh Utils.hh \
+ State.hh Action.hh Random.hh Registry.hh
+Random.o: Random.cc Random.hh Utils.hh
+Registry.o: Registry.cc Registry.hh Utils.hh
+Settings.o: Settings.cc Settings.hh Structs.hh Utils.hh
+State.o: State.cc State.hh Structs.hh Utils.hh
+Structs.o: Structs.cc Structs.hh Utils.hh
+Utils.o: Utils.cc Utils.hh
+cerca_ciutat_enemiga.o: cerca_ciutat_enemiga.cc
+cerca_ciutat_enemiga_v2.o: cerca_ciutat_enemiga_v2.cc
+cercaenemics.o: cercaenemics.cc
+dijkstrademerda.o: dijkstrademerda.cc
+marc.o: marc.cc
+movemciutatenemiga.o: movemciutatenemiga.cc
+movewarriors.o: movewarriors.cc
+nicase.o: nicase.cc Player.hh Info.hh Settings.hh Structs.hh Utils.hh \
+ State.hh Action.hh Random.hh Registry.hh
+porsiaca2.o: porsiaca2.cc Player.hh Info.hh Settings.hh Structs.hh \
+ Utils.hh State.hh Action.hh Random.hh Registry.hh
+segonintent.o: segonintent.cc

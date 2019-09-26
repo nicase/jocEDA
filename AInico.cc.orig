@@ -1,0 +1,153 @@
+#include "Player.hh"
+
+
+/**
+ * Write the name of your player and save this file
+ * with the same name and .cc extension.
+ */
+#define PLAYER_NAME nico
+
+struct PLAYER_NAME : public Player {
+
+  /**
+   * Factory: returns a new instance of this class.
+   * Do not modify this function.
+   */
+  static Player* factory () {
+    return new PLAYER_NAME;
+  }
+
+bool esunwarriorenemic(Pos p) {
+    //cout << "estic a la funcio de bool" << endl;
+    if (cell(p).id != -1) {
+      Unit u = unit(cell(p).id);
+      if (u.type == Warrior and u.player != me()) {
+          //cout << "faig cout de true, pos " << p << endl;
+          return true;
+      }
+    }
+    return false;
+}
+
+void moure_unitat(Unit u, Pos p) {
+    Pos r = u.pos;
+    if (r+Right == p) command(u.id,Right);
+    else if (r+Left == p) command(u.id,Left);
+    else if (r+Top == p) command(u.id,Top);
+    else if (r+Bottom == p) command(u.id,Bottom);
+    else if (r+BR == p) command(u.id,BR);
+    else if (r+RT == p) command(u.id,RT);
+    else if (r+TL == p) command(u.id,TL);
+    else if (r+LB == p) command(u.id,LB);
+}
+
+void cerca_cami (Unit u) {
+        //Cua de pairs --> cost + Pos de la casella
+        
+        map <Pos, int> dist;
+        map <Pos, Pos> posicioanterior;
+        map <Pos, bool> visitat;
+
+        dist.insert(make_pair(u.pos, 0));
+
+        priority_queue < pair <int,Pos>, vector <pair <int,Pos> >, greater<pair <int,Pos> > > Q;
+        Q.push(make_pair(0, u.pos));
+        visitat.insert(make_pair(u.pos, false));
+
+        bool found = false;
+        Pos posUnitatTrobada = Pos(4,4);
+
+        while (not Q.empty() and not found) {
+            pair<int,Pos> actual = Q.top();
+            int distActual = actual.first;
+            Pos posActual = actual.second;
+            int idActual = cell(posActual).id;
+            Q.pop();
+
+            /*if (distActual > limitCalculCotxes) {
+                //    cout << "massa lluny " << round() << endl;
+                moure_cotxe_centre(u);
+                break;
+            }*/
+
+            vector <Pos> celesVeines (8);
+            celesVeines[0] = Pos(posActual.i, posActual.j - 1); //Amunt
+            celesVeines[1] = Pos(posActual.i + 1, posActual.j - 1); //Amunt Dreta
+            celesVeines[2] = Pos(posActual.i + 1, posActual.j); // Dreta
+            celesVeines[3] = Pos(posActual.i + 1, posActual.j + 1); // Dreta Avall
+            celesVeines[4] = Pos(posActual.i, posActual.j + 1); //Avall
+            celesVeines[5] = Pos(posActual.i - 1, posActual.j - 1); //Avall Esquerra
+            celesVeines[6] = Pos(posActual.i - 1, posActual.j); //Esquerra
+            celesVeines[7] = Pos(posActual.i - 1, posActual.j - 1); //Esquerra Amunt
+
+            if (idActual != -1 and unit(idActual).player != me() and unit(idActual).type == Warrior) {
+                found = true;
+                posUnitatTrobada = posActual;
+            }
+          
+            if (not visitat[posActual]) {
+                visitat[posActual] = true;
+
+            Pos p2;
+            p2 = actual + Top;
+            if (pos_ok(p2)) {
+                Cell c2 = cell(p2);
+                if (dist.find(p2) == dist.end()) {
+                    visitat.insert({p2, false}):
+                    dist.insert({p2, 99999});
+                }
+                //ifif (not aliatAprop(posCelaVeina, u.pos)) { //Esquivem aliats o cotxes
+                if (c2.type == Road) {
+                    if (dist[p2] > dist[actual] + 1) {
+                        dist[p2] = dist[actual] + 1;
+                        posicioanterior.insert({p2,actual});
+                        Q.push({dist[p2], p2});
+                    }
+                }
+                else if (c2.type == Desert) {
+                    if (dist[p2] > dist[actual] + 4) {
+                        dist[p2] = dist[actual] + 4;
+                        posicioanterior.insert({p2,actual});
+                        Q.push({dist[p2], p2});
+                    }
+                }
+                //}
+            }
+
+            }
+        }
+
+        if (unitatTrobada) {
+            Pos resultat = posUnitatTrobada;
+            Pos moviment = resultat;
+            while (resultat != u.pos) {
+                moviment = resultat;
+                resultat = posicioanterior[resultat];
+            }
+            moure_unitat(u, moviment);
+        }
+    }
+void move_cars() {
+ vector<int> C = cars(me());
+        //identificadors dels cotxes en el vector C
+        int n = C.size();
+        //n: num de cotxes que tenim
+
+        for(int i=0; i<n; ++i) {
+            int id = C[i];
+            cerca_cami(unit(id)); 
+        }
+}
+  
+  virtual void play () {
+
+      move_cars();
+  }
+
+};
+
+
+/**
+ * Do not modify the following line.
+ */
+RegisterPlayer(PLAYER_NAME);
